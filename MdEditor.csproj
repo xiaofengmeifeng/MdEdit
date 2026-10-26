@@ -36,6 +36,7 @@
     <EmbeddedResource Include="Assets\fa-solid-900.ttf" />
     <EmbeddedResource Include="Assets\hljs-all.min.js" />
     <EmbeddedResource Include="Assets\hljs-github.min.css" />
+    <EmbeddedResource Include="Assets\mermaid.min.js" />
   </ItemGroup>
 
 </Project>

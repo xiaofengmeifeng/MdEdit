@@ -142,6 +142,18 @@ public partial class MainForm
             core.Settings.AreDefaultContextMenusEnabled = true;
             core.Settings.IsZoomControlEnabled = true;
 
+            // 将内置脚本（Mermaid）通过虚拟主机提供给预览页（体积较大，避免 NavigateToString 限制）
+            try
+            {
+                var assetsDir = AssetService.PreparePreviewAssets();
+                core.SetVirtualHostNameToFolderMapping(
+                    AppConstants.AssetHostName, assetsDir, CoreWebView2HostResourceAccessKind.Allow);
+            }
+            catch
+            {
+                // 忽略资产映射失败，Mermaid 将不可用但不影响基本预览
+            }
+
             core.NavigationStarting += OnNavigationStarting;
             core.WebMessageReceived += OnWebMessageReceived;
             core.NewWindowRequested += (_, args) =>
@@ -334,6 +346,7 @@ public partial class MainForm
         var script =
             "try{var y=window.scrollY;" +
             "document.getElementById('content').innerHTML=" + JsonSerializer.Serialize(html) + ";" +
+            "if(window.renderMermaid){window.renderMermaid();}" +
             "if(window.hljs){document.querySelectorAll('#content pre code').forEach(function(el){try{hljs.highlightElement(el);}catch(e){}});}" +
             "if(window.addCopyButtons){window.addCopyButtons();}" +
             "window.scrollTo(0,y);}catch(e){}";

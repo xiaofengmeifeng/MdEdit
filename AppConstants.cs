@@ -14,6 +14,9 @@ internal static class AppConstants
     /// <summary>预览中用于映射本地文件目录的虚拟主机名。</summary>
     public const string PreviewHostName = "mdlocal";
 
+    /// <summary>预览中用于加载内置脚本/样式（如 Mermaid）的虚拟主机名。</summary>
+    public const string AssetHostName = "mdedit";
+
     /// <summary>单实例通信用命名管道的名称。</summary>
     public const string IpcPipeName = "MdEdit_IPC_Pipe";
 

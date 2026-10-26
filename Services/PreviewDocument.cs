@@ -18,6 +18,7 @@ internal static class PreviewDocument
             "<style>" + GitHubCss + "\n" + AssetService.HighlightStyle + "</style></head>" +
             "<body><article id=\"content\" class=\"markdown-body\"></article>" +
             "<script>" + AssetService.HighlightScript + "</script>" +
+            "<script src=\"https://" + AppConstants.AssetHostName + "/mermaid.min.js\"></script>" +
             "<script>" + InteractionScript + "</script></body></html>";
     }
 
@@ -204,6 +205,28 @@ window.stepHit = function (delta) {
   window._focusHit();
   return window._hitIndex;
 };
+window.renderMermaid = function () {
+  if (!window.mermaid) { return; }
+  if (!window._mermaidReady) {
+    try {
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'loose', theme: 'default' });
+      window._mermaidReady = true;
+    } catch (e) {}
+  }
+  var codes = document.querySelectorAll('#content pre code.language-mermaid');
+  for (var i = 0; i < codes.length; i++) {
+    var code = codes[i];
+    var pre = code.parentNode;
+    var host = document.createElement('div');
+    host.className = 'mermaid';
+    host.textContent = code.textContent;
+    if (pre && pre.parentNode) { pre.parentNode.replaceChild(host, pre); }
+  }
+  try {
+    var p = mermaid.run({ querySelector: '#content .mermaid' });
+    if (p && p.catch) { p.catch(function () {}); }
+  } catch (e) {}
+};
 ";
 
     private const string GitHubCss = @"
@@ -288,6 +311,8 @@ body {
 .copy-btn svg { pointer-events: none; }
 mark.search-hit { background: #ffe58f; color: inherit; padding: 0 1px; border-radius: 2px; }
 mark.search-hit.current { background: #ff9f0a; color: #1f2328; }
+.mermaid { text-align: center; margin: 16px 0; }
+.mermaid svg { max-width: 100%; height: auto; }
 .markdown-body table { display: block; width: max-content; max-width: 100%; overflow: auto; border-spacing: 0; border-collapse: collapse; }
 .markdown-body table th, .markdown-body table td { padding: 6px 13px; border: 1px solid #d0d7de; }
 .markdown-body table tr { background-color: #ffffff; border-top: 1px solid #d0d7de; }

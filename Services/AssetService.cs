@@ -12,6 +12,7 @@ internal static class AssetService
     private const string IconFontResource = "MdEditor.Assets.fa-solid-900.ttf";
     private const string HighlightScriptResource = "MdEditor.Assets.hljs-all.min.js";
     private const string HighlightStyleResource = "MdEditor.Assets.hljs-github.min.css";
+    private const string MermaidScriptResource = "MdEditor.Assets.mermaid.min.js";
 
     private static string? _highlightScript;
     private static string? _highlightStyle;
@@ -25,6 +26,15 @@ internal static class AssetService
     /// <summary>代码高亮样式（GitHub 主题）。</summary>
     public static string HighlightStyle =>
         _highlightStyle ??= GetResourceText(HighlightStyleResource);
+
+    /// <summary>把体积较大的预览脚本（Mermaid）释放到本地目录，供虚拟主机加载。</summary>
+    public static string PreparePreviewAssets()
+    {
+        var dir = AppPaths.PreviewAssetsFolder;
+        Directory.CreateDirectory(dir);
+        WriteIfChanged(Path.Combine(dir, "mermaid.min.js"), GetResourceBytes(MermaidScriptResource));
+        return dir;
+    }
 
     /// <summary>加载应用程序图标（用于窗口标题栏）。</summary>
     public static Icon? LoadApplicationIcon()
@@ -113,6 +123,26 @@ internal static class AssetService
         }
 
         return _iconFontFamily;
+    }
+
+    private static void WriteIfChanged(string path, byte[]? data)
+    {
+        if (data is not { Length: > 0 })
+        {
+            return;
+        }
+
+        try
+        {
+            if (!File.Exists(path) || new FileInfo(path).Length != data.Length)
+            {
+                File.WriteAllBytes(path, data);
+            }
+        }
+        catch
+        {
+            // 忽略写入失败
+        }
     }
 
     private static byte[]? GetResourceBytes(string name)

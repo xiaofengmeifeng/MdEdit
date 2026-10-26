@@ -15,6 +15,9 @@ internal static class AppPaths
     /// <summary>WebView2 的用户数据目录。</summary>
     public static string WebViewDataFolder => Path.Combine(DataDirectory, "WebView2");
 
+    /// <summary>预览脚本（如 Mermaid）释放到的目录，通过虚拟主机提供给预览页。</summary>
+    public static string PreviewAssetsFolder => Path.Combine(DataDirectory, "webview-assets");
+
     /// <summary>图标字体释放到临时目录后的路径。</summary>
     public static string IconFontTempFile => Path.Combine(Path.GetTempPath(), "mdedit-fa-solid-900.ttf");
 
