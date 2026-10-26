@@ -217,15 +217,21 @@ window.renderMermaid = function () {
   for (var i = 0; i < codes.length; i++) {
     var code = codes[i];
     var pre = code.parentNode;
-    var host = document.createElement('div');
-    host.className = 'mermaid';
-    host.textContent = code.textContent;
-    if (pre && pre.parentNode) { pre.parentNode.replaceChild(host, pre); }
+    if (pre && pre.tagName === 'PRE') {
+      pre.className = 'mermaid';
+      pre.textContent = code.textContent;
+    }
   }
-  try {
-    var p = mermaid.run({ querySelector: '#content .mermaid' });
-    if (p && p.catch) { p.catch(function () {}); }
-  } catch (e) {}
+  var blocks = document.querySelectorAll('#content .mermaid');
+  for (var j = 0; j < blocks.length; j++) {
+    (function (el) {
+      if (el.getAttribute('data-processed')) { return; }
+      try {
+        var p = mermaid.run({ nodes: [el], suppressErrors: true });
+        if (p && p.catch) { p.catch(function () {}); }
+      } catch (e) {}
+    })(blocks[j]);
+  }
 };
 ";
 
