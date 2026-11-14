@@ -559,32 +559,182 @@ public partial class MainForm
 
     private Panel BuildTabBar()
     {
-        _tabStrip = new FlowLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            FlowDirection = FlowDirection.LeftToRight,
-            WrapContents = false,
-            AutoScroll = true,
-            BackColor = Color.FromArgb(238, 241, 245),
-            Padding = new Padding(6, 1, 6, 1)
-        };
-
-        // 鼠标滚轮横向滚动标签
-        _tabStrip.MouseWheel += (_, e) =>
-        {
-            var scroll = _tabStrip.HorizontalScroll;
-            var value = Math.Max(scroll.Minimum, Math.Min(scroll.Maximum, scroll.Value - e.Delta));
-            _tabStrip.HorizontalScroll.Value = value;
-        };
-
-        var bar = new Panel
+        _tabBar = new Panel
         {
             Dock = DockStyle.Top,
             Height = 33,
             BackColor = Color.FromArgb(238, 241, 245)
         };
-        bar.Controls.Add(_tabStrip);
-        return bar;
+
+        _tabStrip = new Panel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = Color.FromArgb(238, 241, 245)
+        };
+        _tabStrip.Resize += (_, _) => LayoutTabs();
+
+        _tabScrollLeft = MakeIconButton("\uf053", "向左滚动标签");
+        _tabScrollLeft.Dock = DockStyle.Left;
+        _tabScrollLeft.Width = 22;
+        _tabScrollLeft.BackColor = Color.FromArgb(238, 241, 245);
+        _tabScrollLeft.Visible = false;
+        _tabScrollLeft.Click += (_, _) => ScrollTabs(-1);
+
+        _tabScrollRight = MakeIconButton("\uf054", "向右滚动标签");
+        _tabScrollRight.Dock = DockStyle.Right;
+        _tabScrollRight.Width = 22;
+        _tabScrollRight.BackColor = Color.FromArgb(238, 241, 245);
+        _tabScrollRight.Visible = false;
+        _tabScrollRight.Click += (_, _) => ScrollTabs(1);
+
+        _tabBar.Controls.Add(_tabStrip);
+        _tabBar.Controls.Add(_tabScrollLeft);
+        _tabBar.Controls.Add(_tabScrollRight);
+
+        // 鼠标位于标签栏上时，用滚轮横向滚动标签
+        Application.AddMessageFilter(new TabWheelFilter(_tabBar, ScrollTabsByDelta));
+
+        return _tabBar;
+    }
+
+    /// <summary>按当前滚动偏移重新排列标签，并更新左右箭头的可用状态。</summary>
+    private void LayoutTabs()
+    {
+        if (_tabStrip == null || _tabBar == null || _layingOutTabs)
+        {
+            return;
+        }
+
+        _layingOutTabs = true;
+        try
+        {
+            var totalWidth = 0;
+            foreach (Control tab in _tabStrip.Controls)
+            {
+                totalWidth += tab.Width + 2;
+            }
+
+            var barWidth = _tabBar.ClientSize.Width;
+            var needArrows = totalWidth > barWidth;
+            var viewWidth = barWidth - (needArrows ? _tabScrollLeft.Width + _tabScrollRight.Width : 0);
+            if (viewWidth < 0)
+            {
+                viewWidth = 0;
+            }
+
+            _tabViewWidth = viewWidth;
+
+            var maxScroll = Math.Max(0, totalWidth - viewWidth);
+            _tabScroll = Math.Max(0, Math.Min(_tabScroll, maxScroll));
+
+            var x = 0;
+            foreach (Control tab in _tabStrip.Controls)
+            {
+                tab.Height = 30;
+                tab.Location = new Point(x - _tabScroll, 1);
+                x += tab.Width + 2;
+            }
+
+            _tabScrollLeft.Visible = needArrows;
+            _tabScrollRight.Visible = needArrows;
+            _tabScrollLeft.Enabled = _tabScroll > 0;
+            _tabScrollRight.Enabled = _tabScroll < maxScroll;
+        }
+        finally
+        {
+            _layingOutTabs = false;
+        }
+    }
+
+    private void ScrollTabs(int direction)
+    {
+        _tabScroll += direction * 160;
+        LayoutTabs();
+    }
+
+    private void ScrollTabsByDelta(int wheelDelta)
+    {
+        _tabScroll -= wheelDelta;
+        LayoutTabs();
+    }
+
+    private void RelayoutTabsAndRevealActive()
+    {
+        LayoutTabs();
+        var active = _tabStrip.Controls.OfType<DocumentTab>().FirstOrDefault(t => t.IsActive);
+        if (active != null)
+        {
+            EnsureTabVisible(active);
+        }
+    }
+
+    /// <summary>把指定标签滚动到可见范围内。</summary>
+    private void EnsureTabVisible(DocumentTab? tab)
+    {
+        if (tab == null || _tabStrip == null)
+        {
+            return;
+        }
+
+        LayoutTabs();
+        var viewWidth = _tabViewWidth;
+        if (viewWidth <= 0)
+        {
+            _tabScroll = 0;
+            LayoutTabs();
+            return;
+        }
+
+        var left = tab.Left;
+        var right = tab.Left + tab.Width;
+        if (left < 0)
+        {
+            _tabScroll += left;
+        }
+        else if (right > viewWidth)
+        {
+            _tabScroll += right - viewWidth;
+        }
+
+        LayoutTabs();
+    }
+
+    /// <summary>
+    /// 全局消息过滤器：当鼠标指针位于标签栏上方时，把滚轮事件用于横向滚动标签，
+    /// 而不是交给当前获得焦点的控件。
+    /// </summary>
+    private sealed class TabWheelFilter : IMessageFilter
+    {
+        private const int WmMouseWheel = 0x020A;
+
+        private readonly Control _bar;
+        private readonly Action<int> _onScroll;
+
+        public TabWheelFilter(Control bar, Action<int> onScroll)
+        {
+            _bar = bar;
+            _onScroll = onScroll;
+        }
+
+        public bool PreFilterMessage(ref Message m)
+        {
+            if (m.Msg != WmMouseWheel)
+            {
+                return false;
+            }
+
+            var lp = m.LParam.ToInt32();
+            var screenPoint = new Point((short)(lp & 0xFFFF), (short)((lp >> 16) & 0xFFFF));
+            var clientPoint = _bar.PointToClient(screenPoint);
+            if (!_bar.ClientRectangle.Contains(clientPoint))
+            {
+                return false;
+            }
+
+            var delta = (short)((m.WParam.ToInt64() >> 16) & 0xFFFF);
+            _onScroll(delta);
+            return true;
+        }
     }
 
     private ContextMenuStrip BuildTabMenu()

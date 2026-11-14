@@ -59,6 +59,7 @@ public partial class MainForm
         }
 
         _tabStrip.ResumeLayout();
+        LayoutTabs();
         EnsureTabVisible(activeTab);
     }
 
@@ -77,23 +78,6 @@ public partial class MainForm
                 EnsureTabVisible(tab);
                 return;
             }
-        }
-    }
-
-    private void EnsureTabVisible(DocumentTab? tab)
-    {
-        if (tab == null)
-        {
-            return;
-        }
-
-        try
-        {
-            _tabStrip.ScrollControlIntoView(tab);
-        }
-        catch
-        {
-            // 忽略
         }
     }
 

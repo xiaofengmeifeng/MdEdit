@@ -32,9 +32,14 @@ public partial class MainForm : Form
 
     // 文档标签栏
     private Panel _tabBar = null!;
-    private FlowLayoutPanel _tabStrip = null!;
+    private Panel _tabStrip = null!;
+    private Button _tabScrollLeft = null!;
+    private Button _tabScrollRight = null!;
     private ContextMenuStrip _tabMenu = null!;
     private OpenDocument? _contextDocument;
+    private int _tabScroll;
+    private int _tabViewWidth;
+    private bool _layingOutTabs;
 
     // 预览区（WebView2）
     private WebView2 _preview = null!;
@@ -229,6 +234,7 @@ public partial class MainForm : Form
         }
 
         _lastSplitterDistance = _split.SplitterDistance;
+        RelayoutTabsAndRevealActive();
     }
 
     private void OnFormClosing(object? sender, FormClosingEventArgs e)
